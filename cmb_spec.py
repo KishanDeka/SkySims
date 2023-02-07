@@ -1,22 +1,29 @@
 import numpy as np
 import camb
-from camb import correlations
 
 
-cosmo = camb.model.CAMBparams()
+cosmos = camb.model.CAMBparams(WantTensors=True,max_l=8000,max_l_tensor=8000)
 
-cosmo.set_cosmology(H0=67.63,omch2=0.12,ombh2=0.022,omk=0.0,tau=0.054)
-cosmo.InitPower.set_params(As=2.1e-9,ns=0.965,r=0.0)
 
-result = camb.get_results(cosmo)
-result.calc_power_spectra()
+cosmos.set_cosmology(H0=67.63,omch2=0.12,ombh2=0.022,omk=0.0,tau=0.054)
+cosmos.InitPower.set_params(As=2.1e-9,ns=0.965,r=0.001)
 
-result.save_cmb_power_spectra('ps_out.txt',lmax=2400)
+result = camb.get_results(cosmos)
+result.calc_power_spectra(cosmos)
 
-data = np.transpose(np.loadtxt('ps_out.txt'))
-cls = np.transpose(data[1:5])
-clpp = data[-1]
-print(clpp)
-#cl_lensed = correlations.lensed_cls(cls,clpp,lmax=2400,lmax_lensed=2400)
-cl_lensed = result.get_lensed_cls_with-spectrum()
-np.savetxt('ps_lens_theory.txt',cl_lensed)
+lmax = 7000
+ps_arr = np.zeros((lmax+1,10))
+ps_arr[:,0] = np.arange(lmax+1)
+
+unl_cls = result.get_unlensed_total_cls(lmax=lmax,CMB_unit='muK')
+ps_arr[:,1:5]=unl_cls
+
+pot_cls = result.get_lens_potential_cls(lmax=lmax,CMB_unit='muK')
+ps_arr[:,7:10]=pot_cls
+
+np.savetxt('output/ps_out.txt',ps_arr)
+del ps_arr,pot_cls,unl_cls
+
+tot_cls = result.get_total_cls(lmax=7000,CMB_unit='muK')
+np.savetxt('output/ps_len_theory.txt',tot_cls)
+del tot_cls
